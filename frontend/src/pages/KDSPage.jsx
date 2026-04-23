@@ -30,11 +30,16 @@ export default function KDSPage() {
   const [, tick] = useState(0)
 
   useEffect(() => {
-    connectSocket()
-    socket.on('connect', () => {
+    const joinKitchen = () => {
       setConnected(true)
       socket.emit('join-room', 'kitchen')
-    })
+    }
+
+    connectSocket()
+
+    if (socket.connected) joinKitchen()
+
+    socket.on('connect', joinKitchen)
     socket.on('disconnect', () => setConnected(false))
     socket.on('new-order', (order) => {
       addOrder(order)
