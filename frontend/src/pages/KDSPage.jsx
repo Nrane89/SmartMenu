@@ -1,9 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChefHat, Bell, Clock, CheckCircle, AlertCircle, Wifi, WifiOff, RefreshCw } from 'lucide-react'
+import { ChefHat, Bell, BellOff, Clock, CheckCircle, Wifi, WifiOff } from 'lucide-react'
 import { useOrderStore } from '../store/useStore'
 import { connectSocket, socket } from '../utils/socket'
 import { formatPrice } from '../utils/mockData'
+
+function playOrderSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const notes = [523, 659, 784, 1047] // C5 E5 G5 C6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      const t = ctx.currentTime + i * 0.12
+      gain.gain.setValueAtTime(0, t)
+      gain.gain.linearRampToValueAtTime(0.4, t + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3)
+      osc.start(t)
+      osc.stop(t + 0.3)
+    })
+  } catch (_) {}
+}
 
 const STATUS_CONFIG = {
   confirmed: { label: 'Ընդունված', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.25)' },
@@ -28,6 +49,9 @@ export default function KDSPage() {
   const [connected, setConnected] = useState(false)
   const [filter, setFilter] = useState('active')
   const [, tick] = useState(0)
+  const [soundOn, setSoundOn] = useState(() => localStorage.getItem('kds-sound') !== 'off')
+  const soundRef = useRef(soundOn)
+  soundRef.current = soundOn
 
   useEffect(() => {
     const joinKitchen = () => {
@@ -43,6 +67,7 @@ export default function KDSPage() {
     socket.on('disconnect', () => setConnected(false))
     socket.on('new-order', (order) => {
       addOrder(order)
+      if (soundRef.current) playOrderSound()
       if (Notification.permission === 'granted') {
         new Notification(`Նոր պատվեր - Սեղ. ${order.tableId}`, {
           body: `${order.items.length} ուտեստ — ${formatPrice(order.total)}`,
@@ -139,6 +164,26 @@ export default function KDSPage() {
               </span>
             </div>
           )}
+
+          <button
+            onClick={() => setSoundOn((v) => {
+              localStorage.setItem('kds-sound', !v ? 'on' : 'off')
+              return !v
+            })}
+            title={soundOn ? 'Выключить звук' : 'Включить звук'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px',
+              background: soundOn ? 'rgba(167,139,250,0.1)' : 'rgba(71,85,105,0.1)',
+              border: `1px solid ${soundOn ? 'rgba(167,139,250,0.3)' : 'rgba(71,85,105,0.2)'}`,
+              borderRadius: 100, cursor: 'pointer',
+              color: soundOn ? '#a78bfa' : '#475569',
+              fontSize: 13, fontWeight: 600,
+            }}
+          >
+            {soundOn ? <Bell size={13} /> : <BellOff size={13} />}
+            {soundOn ? 'Звук вкл' : 'Звук выкл'}
+          </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {connected
