@@ -50,6 +50,20 @@ router.put('/:id', async (req, res) => {
   }
 })
 
+// PATCH /api/tables/:id/status
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body // 'free' | 'occupied'
+    const ref = db.collection(COL).doc(req.params.id)
+    await ref.update({ status })
+    const data = (await ref.get()).data()
+    req.io?.emit('table-status', { tableId: req.params.id, status })
+    res.json(data)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // DELETE /api/tables/:id
 router.delete('/:id', async (req, res) => {
   try {

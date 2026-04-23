@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart3, ShoppingBag, DollarSign, TrendingUp, Edit3,
   Plus, X, Check, AlertCircle, RefreshCw, QrCode, Download,
-  ToggleLeft, ToggleRight, Trash2, ChevronDown, Star, Tag,
+  ToggleLeft, ToggleRight, Trash2, ChevronDown, Star, Tag, LayoutGrid,
 } from 'lucide-react'
 import { formatPrice } from '../utils/mockData'
 import { useNavigate } from 'react-router-dom'
+import { connectSocket, socket } from '../utils/socket'
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
 
@@ -280,7 +281,14 @@ export default function AdminPage() {
     }
   }
 
-  useEffect(() => { fetchAll() }, [])
+  useEffect(() => {
+    fetchAll()
+    connectSocket()
+    socket.on('table-status', ({ tableId, status }) => {
+      setTables((prev) => prev.map((t) => t.id === tableId ? { ...t, status } : t))
+    })
+    return () => { socket.off('table-status') }
+  }, [])
 
   const addTable = async () => {
     if (!newTableName.trim()) return
@@ -363,8 +371,9 @@ export default function AdminPage() {
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'categories', label: 'Կատեգորիաներ', icon: Tag },
     { id: 'menu', label: 'Մենյու', icon: Edit3 },
-    { id: 'orders', label: 'Պատվերներ', icon: ShoppingBag },
-    { id: 'qr', label: 'QR Կոդ', icon: QrCode },
+    { id: 'orders', label: 'Պատวernerv', icon: ShoppingBag },
+    { id: 'map', label: 'Քartes', icon: LayoutGrid },
+    { id: 'qr', label: 'QR Կods', icon: QrCode },
   ]
 
   return (
@@ -615,6 +624,83 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* TABLE MAP */}
+        {activeTab === 'map' && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Սեղananneri Qartes</h3>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#22c55e' }} />
+                  <span style={{ fontSize: 12, color: '#64748b' }}>Azat</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#f97316' }} />
+                  <span style={{ fontSize: 12, color: '#64748b' }}>Zaghkecvac</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+              {tables.map((t) => {
+                const occupied = t.status === 'occupied'
+                const activeOrder = orders.find((o) => o.tableId === t.id && o.status !== 'delivered')
+                return (
+                  <motion.div
+                    key={t.id}
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                      background: occupied ? 'rgba(249,115,22,0.08)' : 'rgba(34,197,94,0.06)',
+                      border: `2px solid ${occupied ? 'rgba(249,115,22,0.4)' : 'rgba(34,197,94,0.3)'}`,
+                      borderRadius: 16,
+                      padding: '18px 14px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      position: 'relative',
+                    }}
+                    onClick={async () => {
+                      const newStatus = occupied ? 'free' : 'occupied'
+                      await fetch(`${BACKEND}/api/tables/${t.id}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: newStatus }),
+                      })
+                      setTables((prev) => prev.map((tb) => tb.id === t.id ? { ...tb, status: newStatus } : tb))
+                    }}
+                  >
+                    <div style={{
+                      width: 44, height: 44, borderRadius: '50%',
+                      background: occupied ? 'rgba(249,115,22,0.15)' : 'rgba(34,197,94,0.12)',
+                      border: `2px solid ${occupied ? '#f97316' : '#22c55e'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      margin: '0 auto 10px',
+                      fontSize: 18,
+                    }}>
+                      {occupied ? '🍽️' : '✓'}
+                    </div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>{t.name}</p>
+                    <p style={{ fontSize: 11, color: occupied ? '#f97316' : '#22c55e', fontWeight: 600 }}>
+                      {occupied ? 'Zaghkecvac' : 'Azat'}
+                    </p>
+                    {activeOrder && (
+                      <p style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
+                        #{activeOrder.id?.slice(-6)}
+                      </p>
+                    )}
+                  </motion.div>
+                )
+              })}
+            </div>
+
+            {tables.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 60, color: '#334155' }}>
+                <p style={{ fontSize: 40, marginBottom: 12 }}>🪑</p>
+                <p>Seghanner չkan. Avoreli QR Kod tab-ic</p>
               </div>
             )}
           </>

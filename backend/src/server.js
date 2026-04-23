@@ -61,6 +61,12 @@ io.on('connection', (socket) => {
       console.error('[FIREBASE] Error saving order:', err.message)
     }
 
+    // Mark table as occupied
+    try {
+      await db.collection('tables').doc(enriched.tableId).update({ status: 'occupied' })
+      io.emit('table-status', { tableId: enriched.tableId, status: 'occupied' })
+    } catch (_) {}
+
     io.to('kitchen').emit('new-order', enriched)
     socket.emit('order-confirmed', enriched)
     console.log(`[ORDER] New order: ${enriched.id} table=${enriched.tableId}`)
@@ -69,6 +75,16 @@ io.on('connection', (socket) => {
   socket.on('update-order-status', async ({ orderId, status }) => {
     try {
       await db.collection('orders').doc(orderId).update({ status })
+
+      // If delivered, free up the table
+      if (status === 'delivered') {
+        const orderDoc = await db.collection('orders').doc(orderId).get()
+        const tableId = orderDoc.data()?.tableId
+        if (tableId) {
+          await db.collection('tables').doc(tableId).update({ status: 'free' })
+          io.emit('table-status', { tableId, status: 'free' })
+        }
+      }
     } catch (err) {
       console.error('[FIREBASE] Error updating status:', err.message)
     }
