@@ -56,9 +56,15 @@ export default function ItemModal() {
               flexDirection: 'column',
             }}
           >
-            {/* 3D Viewer */}
+            {/* Image or 3D Viewer */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
-              <DishViewer item={selectedItem} />
+              {selectedItem.image ? (
+                <div style={{ height: 220, background: '#0f172a', overflow: 'hidden' }}>
+                  <img src={selectedItem.image} alt={selectedItem.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ) : (
+                <DishViewer item={selectedItem} />
+              )}
 
               {/* Close button */}
               <button

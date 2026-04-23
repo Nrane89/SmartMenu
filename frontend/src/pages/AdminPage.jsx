@@ -51,7 +51,7 @@ function ItemForm({ item, onSave, onClose }) {
   const [form, setForm] = useState(item || {
     name: '', nameEn: '', category: 'mains', price: '',
     description: '', calories: '', prepTime: '', color: '#f97316',
-    spicy: false, tags: [],
+    spicy: false, tags: [], image: '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -109,6 +109,7 @@ function ItemForm({ item, onSave, onClose }) {
           { key: 'price', label: 'Գին (AMD)', type: 'number' },
           { key: 'calories', label: 'Կալորիա', type: 'number' },
           { key: 'prepTime', label: 'Պատրաստման ժամ', type: 'text' },
+          { key: 'image', label: 'Նկարի URL (https://...)', type: 'text' },
         ].map(({ key, label, type }) => (
           <div key={key} style={{ marginBottom: 14 }}>
             <label style={{ fontSize: 11, color: '#64748b', display: 'block', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -128,6 +129,12 @@ function ItemForm({ item, onSave, onClose }) {
             />
           </div>
         ))}
+
+        {form.image ? (
+          <div style={{ marginBottom: 14, borderRadius: 12, overflow: 'hidden', height: 140 }}>
+            <img src={form.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display='none'} />
+          </div>
+        ) : null}
 
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 11, color: '#64748b', display: 'block', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>

@@ -31,9 +31,20 @@ export default function MenuCard({ item, index }) {
       }}
       whileTap={{ scale: 0.98 }}
     >
-      {/* 3D Preview */}
+      {/* Image or 3D Preview */}
       <div style={{ position: 'relative' }}>
-        <DishViewer item={item} compact />
+        {item.image ? (
+          <div style={{ height: 160, overflow: 'hidden', background: '#0f172a' }}>
+            <img
+              src={item.image}
+              alt={item.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              onError={(e) => { e.target.style.display = 'none' }}
+            />
+          </div>
+        ) : (
+          <DishViewer item={item} compact />
+        )}
 
         {/* Tags overlay */}
         {item.tags?.[0] && (
