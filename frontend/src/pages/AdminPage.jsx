@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart3, ShoppingBag, DollarSign, TrendingUp, Edit3,
   Plus, X, Check, AlertCircle, RefreshCw, QrCode, Download,
-  ToggleLeft, ToggleRight, Trash2, ChevronDown, Star,
+  ToggleLeft, ToggleRight, Trash2, ChevronDown, Star, Tag,
 } from 'lucide-react'
 import { formatPrice, CATEGORIES } from '../utils/mockData'
 import { useNavigate } from 'react-router-dom'
@@ -244,6 +244,7 @@ export default function AdminPage() {
   const [menuItems, setMenuItems] = useState([])
   const [orders, setOrders] = useState([])
   const [tables, setTables] = useState([])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [editItem, setEditItem] = useState(null)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -251,21 +252,29 @@ export default function AdminPage() {
   const [newTableName, setNewTableName] = useState('')
   const [editTableId, setEditTableId] = useState(null)
   const [editTableName, setEditTableName] = useState('')
+  const [newCatLabel, setNewCatLabel] = useState('')
+  const [newCatEmoji, setNewCatEmoji] = useState('🍽️')
+  const [editCatId, setEditCatId] = useState(null)
+  const [editCatLabel, setEditCatLabel] = useState('')
+  const [editCatEmoji, setEditCatEmoji] = useState('')
 
   const fetchAll = async () => {
     setLoading(true)
     try {
-      const [menuRes, ordersRes, tablesRes] = await Promise.all([
+      const [menuRes, ordersRes, tablesRes, catsRes] = await Promise.all([
         fetch(`${BACKEND}/api/menu`),
         fetch(`${BACKEND}/api/orders`),
         fetch(`${BACKEND}/api/tables`),
+        fetch(`${BACKEND}/api/categories`),
       ])
       const menuData = await menuRes.json()
       const ordersData = await ordersRes.json()
       const tablesData = await tablesRes.json()
+      const catsData = await catsRes.json()
       setMenuItems(menuData.items || [])
       setOrders(ordersData.orders || [])
       setTables(tablesData.tables || [])
+      setCategories(catsData.categories || [])
     } finally {
       setLoading(false)
     }
@@ -294,6 +303,29 @@ export default function AdminPage() {
     if (!confirm('Հեռացնե՞լ սեղանը')) return
     await fetch(`${BACKEND}/api/tables/${id}`, { method: 'DELETE' })
     setTables((prev) => prev.filter((t) => t.id !== id))
+  }
+
+  const addCategory = async () => {
+    if (!newCatLabel.trim()) return
+    const res = await fetch(`${BACKEND}/api/categories`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label: newCatLabel.trim(), emoji: newCatEmoji }) })
+    const c = await res.json()
+    setCategories((prev) => [...prev, c])
+    setNewCatLabel('')
+    setNewCatEmoji('🍽️')
+  }
+
+  const renameCategory = async (id) => {
+    if (!editCatLabel.trim()) return
+    const res = await fetch(`${BACKEND}/api/categories/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label: editCatLabel.trim(), emoji: editCatEmoji }) })
+    const c = await res.json()
+    setCategories((prev) => prev.map((cat) => cat.id === id ? c : cat))
+    setEditCatId(null)
+  }
+
+  const deleteCategory = async (id) => {
+    if (!confirm('Հեռացնե՞լ կատեգորիան')) return
+    await fetch(`${BACKEND}/api/categories/${id}`, { method: 'DELETE' })
+    setCategories((prev) => prev.filter((c) => c.id !== id))
   }
 
   const seedMenu = async () => {
@@ -329,6 +361,7 @@ export default function AdminPage() {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    { id: 'categories', label: 'Կատեգորիաներ', icon: Tag },
     { id: 'menu', label: 'Մենյու', icon: Edit3 },
     { id: 'orders', label: 'Պատվերներ', icon: ShoppingBag },
     { id: 'qr', label: 'QR Կոդ', icon: QrCode },
@@ -416,6 +449,64 @@ export default function AdminPage() {
                   </div>
                 ))
               )}
+            </div>
+          </>
+        )}
+
+        {/* CATEGORIES */}
+        {activeTab === 'categories' && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Կատեգորիաներ ({categories.length})</h3>
+            </div>
+
+            {/* Add new category */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+              <input
+                value={newCatEmoji}
+                onChange={(e) => setNewCatEmoji(e.target.value)}
+                placeholder="🍽️"
+                style={{ width: 56, padding: '10px', background: '#1e293b', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 10, color: '#f1f5f9', fontSize: 20, outline: 'none', textAlign: 'center', fontFamily: 'inherit' }}
+              />
+              <input
+                value={newCatLabel}
+                onChange={(e) => setNewCatLabel(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addCategory()}
+                placeholder="Օր․ Սուշի ռոլեր, Շաուրմա..."
+                style={{ flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 10, color: '#f1f5f9', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+              />
+              <button
+                onClick={addCategory}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: 'linear-gradient(135deg, #f97316, #ea580c)', border: 'none', borderRadius: 10, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
+              >
+                <Plus size={15} />
+                Ավելացնել
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {categories.map((cat) => (
+                <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: '#1e293b', border: '1px solid rgba(148,163,184,0.08)', borderRadius: 14 }}>
+                  {editCatId === cat.id ? (
+                    <>
+                      <input value={editCatEmoji} onChange={(e) => setEditCatEmoji(e.target.value)} style={{ width: 50, padding: '6px', background: '#0f172a', border: '1px solid rgba(249,115,22,0.4)', borderRadius: 8, color: '#f1f5f9', fontSize: 18, outline: 'none', textAlign: 'center', fontFamily: 'inherit' }} />
+                      <input value={editCatLabel} onChange={(e) => setEditCatLabel(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && renameCategory(cat.id)} autoFocus style={{ flex: 1, padding: '8px 12px', background: '#0f172a', border: '1px solid rgba(249,115,22,0.4)', borderRadius: 8, color: '#f1f5f9', fontSize: 14, outline: 'none', fontFamily: 'inherit' }} />
+                      <button onClick={() => renameCategory(cat.id)} style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: '#22c55e' }}><Check size={14} /></button>
+                      <button onClick={() => setEditCatId(null)} style={{ background: 'rgba(148,163,184,0.06)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: '#64748b' }}><X size={14} /></button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: 24 }}>{cat.emoji}</span>
+                      <p style={{ flex: 1, fontSize: 15, fontWeight: 600, color: '#f1f5f9' }}>{cat.label}</p>
+                      <span style={{ fontSize: 11, color: '#475569' }}>{menuItems.filter((m) => m.category === cat.id).length} ուտեստ</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => { setEditCatId(cat.id); setEditCatLabel(cat.label); setEditCatEmoji(cat.emoji) }} style={{ width: 32, height: 32, background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', borderRadius: 8, cursor: 'pointer', color: '#60a5fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Edit3 size={13} /></button>
+                        <button onClick={() => deleteCategory(cat.id)} style={{ width: 32, height: 32, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)', borderRadius: 8, cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
             </div>
           </>
         )}

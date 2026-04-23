@@ -29,6 +29,14 @@ export default function MenuPage() {
       .then((data) => setMenuItems(data.items || []))
       .catch(() => setMenuItems(MENU_ITEMS))
 
+    fetch(`${BACKEND}/api/categories`)
+      .then((r) => r.json())
+      .then((data) => {
+        const cats = [{ id: 'all', label: 'Բոլորը', emoji: '🍽️' }, ...(data.categories || [])]
+        setCategories(cats)
+      })
+      .catch(() => setCategories(CATEGORIES))
+
     connectSocket()
     socket.on('connect', () => setConnected(true))
     socket.on('disconnect', () => setConnected(false))
