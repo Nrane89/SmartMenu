@@ -31,7 +31,10 @@ export default function KDSPage() {
 
   useEffect(() => {
     connectSocket()
-    socket.on('connect', () => setConnected(true))
+    socket.on('connect', () => {
+      setConnected(true)
+      socket.emit('join-room', 'kitchen')
+    })
     socket.on('disconnect', () => setConnected(false))
     socket.on('new-order', (order) => {
       addOrder(order)
