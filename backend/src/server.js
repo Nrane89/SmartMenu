@@ -6,6 +6,7 @@ import { v4 as uuid } from 'uuid'
 import { db } from './firebase.js'
 import ordersRouter from './routes/orders.js'
 import menuRouter from './routes/menu.js'
+import tablesRouter from './routes/tables.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -28,6 +29,7 @@ app.use((req, _res, next) => {
 
 app.use('/api/orders', ordersRouter)
 app.use('/api/menu', menuRouter)
+app.use('/api/tables', tablesRouter)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() })

@@ -205,49 +205,23 @@ function ItemForm({ item, onSave, onClose }) {
   )
 }
 
-function QRModal({ tableId, onClose }) {
-  const url = `https://menu.aadem.am/menu/${tableId}`
+function QRModal({ table, onClose }) {
+  const url = `https://menu.aadem.am/menu/${table.id}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      background: 'rgba(0,0,0,0.7)',
-      backdropFilter: 'blur(8px)',
-      zIndex: 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 20,
-    }}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        style={{
-          background: '#0f172a',
-          border: '1px solid rgba(148,163,184,0.1)',
-          borderRadius: 20,
-          padding: 28,
-          width: '100%', maxWidth: 360,
-          textAlign: 'center',
-        }}
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        style={{ background: '#0f172a', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 360, textAlign: 'center' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ fontSize: 17, fontWeight: 700, color: '#f1f5f9' }}>QR — Սեղան {tableId}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-            <X size={20} />
-          </button>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: '#f1f5f9' }}>QR — {table.name}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}><X size={20} /></button>
         </div>
         <img src={qrUrl} alt="QR Code" style={{ width: 220, height: 220, borderRadius: 12, margin: '0 auto 16px' }} />
         <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16, wordBreak: 'break-all' }}>{url}</p>
-        <a
-          href={qrUrl}
-          download={`QR-${tableId}.png`}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '12px',
-            background: 'linear-gradient(135deg, #f97316, #ea580c)',
-            borderRadius: 12, color: 'white',
-            fontSize: 14, fontWeight: 700, textDecoration: 'none',
-          }}
+        <a href={qrUrl} download={`QR-${table.id}.png`}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: 'linear-gradient(135deg, #f97316, #ea580c)', borderRadius: 12, color: 'white', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
         >
           <Download size={16} />
           Ներբեռնել QR
@@ -262,30 +236,58 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [menuItems, setMenuItems] = useState([])
   const [orders, setOrders] = useState([])
+  const [tables, setTables] = useState([])
   const [loading, setLoading] = useState(true)
   const [editItem, setEditItem] = useState(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [qrTable, setQrTable] = useState(null)
-
-  const tables = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10']
+  const [newTableName, setNewTableName] = useState('')
+  const [editTableId, setEditTableId] = useState(null)
+  const [editTableName, setEditTableName] = useState('')
 
   const fetchAll = async () => {
     setLoading(true)
     try {
-      const [menuRes, ordersRes] = await Promise.all([
+      const [menuRes, ordersRes, tablesRes] = await Promise.all([
         fetch(`${BACKEND}/api/menu`),
         fetch(`${BACKEND}/api/orders`),
+        fetch(`${BACKEND}/api/tables`),
       ])
       const menuData = await menuRes.json()
       const ordersData = await ordersRes.json()
+      const tablesData = await tablesRes.json()
       setMenuItems(menuData.items || [])
       setOrders(ordersData.orders || [])
+      setTables(tablesData.tables || [])
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => { fetchAll() }, [])
+
+  const addTable = async () => {
+    if (!newTableName.trim()) return
+    const res = await fetch(`${BACKEND}/api/tables`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newTableName.trim() }) })
+    const t = await res.json()
+    setTables((prev) => [...prev, t])
+    setNewTableName('')
+  }
+
+  const renameTable = async (id) => {
+    if (!editTableName.trim()) return
+    const res = await fetch(`${BACKEND}/api/tables/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: editTableName.trim() }) })
+    const t = await res.json()
+    setTables((prev) => prev.map((tb) => tb.id === id ? t : tb))
+    setEditTableId(null)
+    setEditTableName('')
+  }
+
+  const deleteTable = async (id) => {
+    if (!confirm('Հեռացնե՞լ սեղանը')) return
+    await fetch(`${BACKEND}/api/tables/${id}`, { method: 'DELETE' })
+    setTables((prev) => prev.filter((t) => t.id !== id))
+  }
 
   const seedMenu = async () => {
     if (!confirm('Seed անել սկզբնական մենյու՞ (միայն եթե Firebase-ը դատարկ է)')) return
@@ -523,25 +525,60 @@ export default function AdminPage() {
         {/* QR CODES */}
         {activeTab === 'qr' && (
           <>
-            <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>QR Կոդեր սեղանների համար</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Սեղաններ ({tables.length})</h3>
+            </div>
+
+            {/* Add new table */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+              <input
+                value={newTableName}
+                onChange={(e) => setNewTableName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addTable()}
+                placeholder="Օր․ Տերաս 1, VIP 2, Սեղան 11..."
+                style={{ flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 10, color: '#f1f5f9', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+              />
+              <button
+                onClick={addTable}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: 'linear-gradient(135deg, #f97316, #ea580c)', border: 'none', borderRadius: 10, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
+              >
+                <Plus size={15} />
+                Ավելացնել
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
               {tables.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setQrTable(t)}
-                  style={{
-                    padding: '20px 16px',
-                    background: '#1e293b',
-                    border: '1px solid rgba(148,163,184,0.08)',
-                    borderRadius: 14, cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <QrCode size={32} color="#f97316" />
-                  <p style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>Սեղան {t}</p>
-                  <p style={{ fontSize: 11, color: '#64748b' }}>Դիտել QR</p>
-                </button>
+                <div key={t.id} style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.08)', borderRadius: 14, padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {editTableId === t.id ? (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input
+                        value={editTableName}
+                        onChange={(e) => setEditTableName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && renameTable(t.id)}
+                        autoFocus
+                        style={{ flex: 1, padding: '6px 10px', background: '#0f172a', border: '1px solid rgba(249,115,22,0.4)', borderRadius: 8, color: '#f1f5f9', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}
+                      />
+                      <button onClick={() => renameTable(t.id)} style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: '#22c55e' }}><Check size={14} /></button>
+                      <button onClick={() => setEditTableId(null)} style={{ background: 'rgba(148,163,184,0.06)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: '#64748b' }}><X size={14} /></button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{t.name}</p>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button onClick={() => { setEditTableId(t.id); setEditTableName(t.name) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4 }}><Edit3 size={13} /></button>
+                        <button onClick={() => deleteTable(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4 }}><Trash2 size={13} /></button>
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setQrTable(t)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: 10, cursor: 'pointer', color: '#f97316', fontSize: 13, fontWeight: 600 }}
+                  >
+                    <QrCode size={16} />
+                    QR Դիտել
+                  </button>
+                </div>
               ))}
             </div>
           </>
@@ -556,7 +593,7 @@ export default function AdminPage() {
         />
       )}
 
-      {qrTable && <QRModal tableId={qrTable} onClose={() => setQrTable(null)} />}
+      {qrTable && <QRModal table={qrTable} onClose={() => setQrTable(null)} />}
     </div>
   )
 }
