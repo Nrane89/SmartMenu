@@ -69,7 +69,8 @@ io.on('connection', (socket) => {
       io.emit('table-status', { tableId: enriched.tableId, status: 'occupied' })
     } catch (_) {}
 
-    io.to('kitchen').emit('new-order', enriched)
+    const kitchenRoom = enriched.restaurantId ? `kitchen-${enriched.restaurantId}` : 'kitchen'
+    io.to(kitchenRoom).emit('new-order', enriched)
     socket.emit('order-confirmed', enriched)
     console.log(`[ORDER] New order: ${enriched.id} table=${enriched.tableId}`)
   })
@@ -81,16 +82,23 @@ io.on('connection', (socket) => {
       // If delivered, free up the table
       if (status === 'delivered') {
         const orderDoc = await db.collection('orders').doc(orderId).get()
-        const tableId = orderDoc.data()?.tableId
+        const orderData = orderDoc.data()
+        const tableId = orderData?.tableId
         if (tableId) {
           await db.collection('tables').doc(tableId).update({ status: 'free' })
           io.emit('table-status', { tableId, status: 'free' })
         }
+        const kitchenRoom = orderData?.restaurantId ? `kitchen-${orderData.restaurantId}` : 'kitchen'
+        io.to(kitchenRoom).emit('order-status-updated', { orderId, status })
+      } else {
+        const orderDoc = await db.collection('orders').doc(orderId).get()
+        const orderData = orderDoc.data()
+        const kitchenRoom = orderData?.restaurantId ? `kitchen-${orderData.restaurantId}` : 'kitchen'
+        io.to(kitchenRoom).emit('order-status-updated', { orderId, status })
       }
     } catch (err) {
       console.error('[FIREBASE] Error updating status:', err.message)
     }
-    io.to('kitchen').emit('order-status-updated', { orderId, status })
   })
 
   socket.on('disconnect', () => {

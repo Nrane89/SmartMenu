@@ -13,7 +13,7 @@ const PAYMENT_METHODS = [
 
 export default function PaymentModal() {
   const { paymentOpen, closePayment, openSuccess } = useUIStore()
-  const { items, total, tableId, note, clearCart } = useCartStore()
+  const { items, total, tableId, restaurantId, note, clearCart } = useCartStore()
   const { addOrder } = useOrderStore()
 
   const [method, setMethod] = useState('card')
@@ -52,6 +52,7 @@ export default function PaymentModal() {
     const order = {
       id: `ORD-${Date.now().toString(36).toUpperCase()}`,
       tableId: tableId || 'T1',
+      restaurantId: restaurantId || 'default',
       items: items.map((i) => ({ ...i, status: 'pending' })),
       note,
       total: grandTotal,

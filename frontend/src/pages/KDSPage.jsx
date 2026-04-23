@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChefHat, Bell, BellOff, Clock, CheckCircle, Wifi, WifiOff } from 'lucide-react'
 import { useOrderStore } from '../store/useStore'
@@ -45,6 +46,7 @@ function elapsed(iso) {
 }
 
 export default function KDSPage() {
+  const { restaurantId } = useParams()
   const { orders, addOrder, updateOrderStatus, updateItemStatus } = useOrderStore()
   const [connected, setConnected] = useState(false)
   const [filter, setFilter] = useState('active')
@@ -54,9 +56,10 @@ export default function KDSPage() {
   soundRef.current = soundOn
 
   useEffect(() => {
+    const kitchenRoom = restaurantId ? `kitchen-${restaurantId}` : 'kitchen'
     const joinKitchen = () => {
       setConnected(true)
-      socket.emit('join-room', 'kitchen')
+      socket.emit('join-room', kitchenRoom)
     }
 
     connectSocket()
@@ -126,7 +129,7 @@ export default function KDSPage() {
           </div>
           <div>
             <h1 style={{ fontSize: 17, fontWeight: 800 }}>Խոհանոցի Էկրան</h1>
-            <p style={{ fontSize: 11, color: '#475569' }}>Kitchen Display System</p>
+            <p style={{ fontSize: 11, color: '#475569' }}>KDS {restaurantId ? `· ${restaurantId}` : ''}</p>
           </div>
         </div>
 

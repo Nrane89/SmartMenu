@@ -31,6 +31,7 @@ export default function App() {
         <Route path="/menu/:tableId" element={<MenuPage />} />
         <Route path="/menu/:restaurantId/:tableId" element={<MenuPage />} />
         <Route path="/kds" element={<KDSPage />} />
+        <Route path="/kds/:restaurantId" element={<KDSPage />} />
         <Route path="/admin" element={<RequireAdmin><AdminPage /></RequireAdmin>} />
       </Routes>
     </BrowserRouter>

@@ -16,7 +16,7 @@ import { useLang } from '../hooks/useLang'
 export default function MenuPage() {
   const { tableId, restaurantId } = useParams()
   const { selectedCategory, setSelectedCategory, searchQuery, setSearchQuery, filteredItems, setMenuItems, setCategories } = useMenuStore()
-  const { setTableId } = useCartStore()
+  const { setTableId, setRestaurantId } = useCartStore()
   const [connected, setConnected] = useState(false)
   const [categories, setLocalCategories] = useState(CATEGORIES)
   const searchRef = useRef()
@@ -24,6 +24,7 @@ export default function MenuPage() {
 
   useEffect(() => {
     setTableId(tableId || 'T1')
+    if (restaurantId) setRestaurantId(restaurantId)
 
     const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
     const rid = restaurantId ? `?restaurantId=${restaurantId}` : ''

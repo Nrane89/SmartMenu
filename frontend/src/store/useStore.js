@@ -28,10 +28,12 @@ export const useCartStore = create(
   persist(
     (set, get) => ({
       tableId: null,
+      restaurantId: null,
       items: [],
       note: '',
 
       setTableId: (id) => set({ tableId: id }),
+      setRestaurantId: (id) => set({ restaurantId: id }),
       setNote: (note) => set({ note }),
 
       addItem: (item) =>

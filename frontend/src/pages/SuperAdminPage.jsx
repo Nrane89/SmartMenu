@@ -169,6 +169,7 @@ export default function SuperAdminPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {restaurants.map((r) => {
                 const menuUrl = `https://menu.aadem.am/menu/${r.id}/T1`
+                const kdsUrl = `https://menu.aadem.am/kds/${r.id}`
                 const adminCnt = admins.filter((a) => a.restaurantId === r.id).length
                 return (
                   <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', background: '#1e293b', border: '1px solid rgba(148,163,184,0.08)', borderRadius: 14 }}>
@@ -182,9 +183,13 @@ export default function SuperAdminPage() {
                         <span style={{ fontSize: 11, color: '#475569' }}>{adminCnt} адм.</span>
                       </div>
                     </div>
-                    <button onClick={() => copyText(menuUrl)} title="Скопировать URL меню" style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+                    <button onClick={() => copyText(menuUrl)} title="Меню URL" style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
                       {copied === menuUrl ? <Check size={13} /> : <Copy size={13} />}
-                      URL
+                      Меню
+                    </button>
+                    <button onClick={() => copyText(kdsUrl)} title="KDS URL" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: '#22c55e', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+                      {copied === kdsUrl ? <Check size={13} /> : <Copy size={13} />}
+                      KDS
                     </button>
                     <button onClick={() => deleteRestaurant(r.id)} style={{ width: 34, height: 34, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)', borderRadius: 8, cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Trash2 size={14} />
