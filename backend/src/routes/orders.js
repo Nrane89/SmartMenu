@@ -1,23 +1,33 @@
 import { Router } from 'express'
 import { v4 as uuid } from 'uuid'
-import { orders } from '../server.js'
+import { db } from '../firebase.js'
 
 const router = Router()
 
 // GET /api/orders
-router.get('/', (_req, res) => {
-  res.json({ orders, total: orders.length })
+router.get('/', async (_req, res) => {
+  try {
+    const snap = await db.collection('orders').orderBy('createdAt', 'desc').get()
+    const orders = snap.docs.map((d) => d.data())
+    res.json({ orders, total: orders.length })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // GET /api/orders/:id
-router.get('/:id', (req, res) => {
-  const order = orders.find((o) => o.id === req.params.id)
-  if (!order) return res.status(404).json({ error: 'Order not found' })
-  res.json(order)
+router.get('/:id', async (req, res) => {
+  try {
+    const doc = await db.collection('orders').doc(req.params.id).get()
+    if (!doc.exists) return res.status(404).json({ error: 'Order not found' })
+    res.json(doc.data())
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // POST /api/orders
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { tableId, items, note, total, paymentMethod } = req.body
   if (!tableId || !items?.length) {
     return res.status(400).json({ error: 'tableId and items are required' })
@@ -34,47 +44,65 @@ router.post('/', (req, res) => {
     createdAt: new Date().toISOString(),
   }
 
-  orders.unshift(order)
-  req.io.to('kitchen').emit('new-order', order)
-  req.io.to(`table-${tableId}`).emit('order-confirmed', order)
-
-  res.status(201).json(order)
+  try {
+    await db.collection('orders').doc(order.id).set(order)
+    req.io.to('kitchen').emit('new-order', order)
+    req.io.to(`table-${tableId}`).emit('order-confirmed', order)
+    res.status(201).json(order)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // PATCH /api/orders/:id/status
-router.patch('/:id/status', (req, res) => {
-  const order = orders.find((o) => o.id === req.params.id)
-  if (!order) return res.status(404).json({ error: 'Order not found' })
-
+router.patch('/:id/status', async (req, res) => {
   const { status } = req.body
   const valid = ['confirmed', 'preparing', 'ready', 'delivered']
   if (!valid.includes(status)) {
     return res.status(400).json({ error: `Status must be one of: ${valid.join(', ')}` })
   }
 
-  order.status = status
-  order.updatedAt = new Date().toISOString()
+  try {
+    const ref = db.collection('orders').doc(req.params.id)
+    const doc = await ref.get()
+    if (!doc.exists) return res.status(404).json({ error: 'Order not found' })
 
-  req.io.to('kitchen').emit('order-status-updated', { orderId: order.id, status })
-  req.io.to(`table-${order.tableId}`).emit('order-status-updated', { orderId: order.id, status })
+    await ref.update({ status, updatedAt: new Date().toISOString() })
+    const updated = (await ref.get()).data()
 
-  res.json(order)
+    req.io.to('kitchen').emit('order-status-updated', { orderId: updated.id, status })
+    req.io.to(`table-${updated.tableId}`).emit('order-status-updated', { orderId: updated.id, status })
+
+    res.json(updated)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // PATCH /api/orders/:id/items/:itemId/status
-router.patch('/:id/items/:itemId/status', (req, res) => {
-  const order = orders.find((o) => o.id === req.params.id)
-  if (!order) return res.status(404).json({ error: 'Order not found' })
+router.patch('/:id/items/:itemId/status', async (req, res) => {
+  try {
+    const ref = db.collection('orders').doc(req.params.id)
+    const doc = await ref.get()
+    if (!doc.exists) return res.status(404).json({ error: 'Order not found' })
 
-  const item = order.items.find((i) => i.id === req.params.itemId)
-  if (!item) return res.status(404).json({ error: 'Item not found' })
+    const order = doc.data()
+    const items = order.items.map((i) =>
+      i.id === req.params.itemId ? { ...i, status: req.body.status || 'done' } : i
+    )
 
-  item.status = req.body.status || 'done'
-  req.io.to('kitchen').emit('item-status-updated', {
-    orderId: order.id, itemId: item.id, status: item.status,
-  })
+    await ref.update({ items })
+    const updated = (await ref.get()).data()
+    const item = updated.items.find((i) => i.id === req.params.itemId)
 
-  res.json(order)
+    req.io.to('kitchen').emit('item-status-updated', {
+      orderId: updated.id, itemId: item.id, status: item.status,
+    })
+
+    res.json(updated)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 export default router
