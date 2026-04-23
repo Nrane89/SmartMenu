@@ -214,8 +214,8 @@ function ItemForm({ item, onSave, onClose, categories }) {
   )
 }
 
-function QRModal({ table, onClose }) {
-  const url = `https://menu.aadem.am/menu/${table.id}`
+function QRModal({ table, restaurantId, onClose }) {
+  const url = `https://menu.aadem.am/menu/${restaurantId || table.restaurantId || 'default'}/${table.id}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`
 
   return (
@@ -787,7 +787,7 @@ export default function AdminPage() {
         />
       )}
 
-      {qrTable && <QRModal table={qrTable} onClose={() => setQrTable(null)} />}
+      {qrTable && <QRModal table={qrTable} restaurantId={restaurantId} onClose={() => setQrTable(null)} />}
     </div>
   )
 }

@@ -20,7 +20,10 @@ router.get('/', async (req, res) => {
     const { restaurantId } = req.query
     const snap = await db.collection(COL).orderBy('order').get()
     let cats = snap.docs.map((d) => d.data())
-    if (restaurantId) cats = cats.filter((c) => c.restaurantId === restaurantId)
+    if (restaurantId) {
+      cats = cats.filter((c) => c.restaurantId === restaurantId)
+      return res.json({ categories: cats })
+    }
     if (cats.length === 0) return res.json({ categories: DEFAULT_CATS })
     res.json({ categories: cats })
   } catch (err) {

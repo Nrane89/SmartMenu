@@ -13,7 +13,7 @@ import { CATEGORIES, MENU_ITEMS } from '../utils/mockData'
 import { connectSocket, socket } from '../utils/socket'
 
 export default function MenuPage() {
-  const { tableId } = useParams()
+  const { tableId, restaurantId } = useParams()
   const { selectedCategory, setSelectedCategory, searchQuery, setSearchQuery, filteredItems, setMenuItems, setCategories } = useMenuStore()
   const { setTableId } = useCartStore()
   const [connected, setConnected] = useState(false)
@@ -21,19 +21,20 @@ export default function MenuPage() {
 
   useEffect(() => {
     setTableId(tableId || 'T1')
-    setCategories(CATEGORIES)
 
     const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
-    fetch(`${BACKEND}/api/menu`)
+    const rid = restaurantId ? `?restaurantId=${restaurantId}` : ''
+
+    fetch(`${BACKEND}/api/menu${rid}`)
       .then((r) => r.json())
       .then((data) => setMenuItems(data.items || []))
       .catch(() => setMenuItems(MENU_ITEMS))
 
-    fetch(`${BACKEND}/api/categories`)
+    fetch(`${BACKEND}/api/categories${rid}`)
       .then((r) => r.json())
       .then((data) => {
-        const cats = [{ id: 'all', label: 'Բոլորը', emoji: '🍽️' }, ...(data.categories || [])]
-        setCategories(cats)
+        const cats = [{ id: 'all', label: 'Բոlory', emoji: '🍽️' }, ...(data.categories || [])]
+        setCategories(cats.length > 1 ? cats : CATEGORIES)
       })
       .catch(() => setCategories(CATEGORIES))
 
