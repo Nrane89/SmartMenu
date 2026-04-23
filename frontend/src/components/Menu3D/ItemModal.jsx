@@ -1,12 +1,14 @@
-import { useEffect } from 'react'
+﻿import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Star, Clock, Flame, Plus, Minus, ShoppingCart, Zap } from 'lucide-react'
 import DishViewer from './DishViewer'
 import { useCartStore, useUIStore } from '../../store/useStore'
+import { useLang } from '../../hooks/useLang'
 import { formatPrice } from '../../utils/mockData'
 
 export default function ItemModal() {
   const { selectedItem, closeViewer } = useUIStore()
+  const { t } = useLang()
   const { addItem, updateQty, items } = useCartStore()
 
   const cartItem = selectedItem ? items.find((i) => i.id === selectedItem.id) : null
@@ -96,7 +98,7 @@ export default function ItemModal() {
                     color: '#f87171',
                     borderColor: 'rgba(239,68,68,0.25)',
                   }}>
-                    🌶️ Կծու
+                    🌶️ {t("spicy")}
                   </span>
                 )}
               </div>
@@ -135,7 +137,7 @@ export default function ItemModal() {
                   label="Պատրաստման ժամ" value={selectedItem.prepTime} />
                 <div style={{ width: 1, background: 'rgba(148,163,184,0.1)' }} />
                 <StatItem icon={<Zap size={14} color="#a78bfa" />}
-                  label="Կալorия" value={`${selectedItem.calories} կկ`} />
+                  label={t("calories")} value={`${selectedItem.calories} կկ`} />
               </div>
 
               {/* Description */}
@@ -225,3 +227,5 @@ function StatItem({ icon, label, value }) {
     </div>
   )
 }
+
+

@@ -11,13 +11,16 @@ import SuccessModal from '../components/Payment/SuccessModal'
 import { useMenuStore, useCartStore } from '../store/useStore'
 import { CATEGORIES, MENU_ITEMS } from '../utils/mockData'
 import { connectSocket, socket } from '../utils/socket'
+import { useLang } from '../hooks/useLang'
 
 export default function MenuPage() {
   const { tableId, restaurantId } = useParams()
   const { selectedCategory, setSelectedCategory, searchQuery, setSearchQuery, filteredItems, setMenuItems, setCategories } = useMenuStore()
   const { setTableId } = useCartStore()
   const [connected, setConnected] = useState(false)
+  const [categories, setLocalCategories] = useState(CATEGORIES)
   const searchRef = useRef()
+  const { lang, changeLang, t, LANGS } = useLang()
 
   useEffect(() => {
     setTableId(tableId || 'T1')
@@ -33,10 +36,13 @@ export default function MenuPage() {
     fetch(`${BACKEND}/api/categories${rid}`)
       .then((r) => r.json())
       .then((data) => {
-        const cats = [{ id: 'all', label: 'Բոlory', emoji: '🍽️' }, ...(data.categories || [])]
-        setCategories(cats.length > 1 ? cats : CATEGORIES)
+        const fetched = data.categories || []
+        const cats = [{ id: 'all', label: t('allCategory'), emoji: '🍽️' }, ...fetched]
+        const final = cats.length > 1 ? cats : CATEGORIES
+        setLocalCategories(final)
+        setCategories(final)
       })
-      .catch(() => setCategories(CATEGORIES))
+      .catch(() => { setLocalCategories(CATEGORIES); setCategories(CATEGORIES) })
 
     connectSocket()
     socket.on('connect', () => setConnected(true))
@@ -46,7 +52,7 @@ export default function MenuPage() {
       socket.off('connect')
       socket.off('disconnect')
     }
-  }, [tableId])
+  }, [tableId, lang])
 
   const items = filteredItems()
 
@@ -74,8 +80,7 @@ export default function MenuPage() {
               <span style={{
                 fontSize: 10, fontWeight: 700,
                 background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                color: 'white', padding: '2px 8px',
-                borderRadius: 100,
+                color: 'white', padding: '2px 8px', borderRadius: 100,
               }}>3D</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
@@ -85,27 +90,48 @@ export default function MenuPage() {
                 boxShadow: `0 0 6px ${connected ? '#22c55e' : '#ef4444'}`,
               }} />
               <span style={{ fontSize: 11, color: '#64748b' }}>
-                Սեղան {tableId || 'T1'}
+                {t('table')} {tableId || 'T1'}
               </span>
             </div>
           </div>
 
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '6px 12px',
-            background: 'rgba(249,115,22,0.1)',
-            border: '1px solid rgba(249,115,22,0.2)',
-            borderRadius: 10,
-          }}>
-            <Wifi size={13} color="#f97316" />
-            <span style={{ fontSize: 12, color: '#f97316', fontWeight: 600 }}>Ուղիղ</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Language switcher */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              {LANGS.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => changeLang(l.code)}
+                  style={{
+                    padding: '4px 8px',
+                    background: lang === l.code ? 'rgba(249,115,22,0.15)' : 'transparent',
+                    border: lang === l.code ? '1px solid rgba(249,115,22,0.4)' : '1px solid rgba(148,163,184,0.1)',
+                    borderRadius: 6, cursor: 'pointer',
+                    fontSize: 11, fontWeight: 700,
+                    color: lang === l.code ? '#f97316' : '#64748b',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {l.flag} {l.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 12px',
+              background: 'rgba(249,115,22,0.1)',
+              border: '1px solid rgba(249,115,22,0.2)',
+              borderRadius: 10,
+            }}>
+              <Wifi size={13} color="#f97316" />
+              <span style={{ fontSize: 12, color: '#f97316', fontWeight: 600 }}>{t('live')}</span>
+            </div>
           </div>
         </div>
 
         {/* Search */}
-        <div style={{
-          position: 'relative', marginBottom: 14,
-        }}>
+        <div style={{ position: 'relative', marginBottom: 14 }}>
           <Search size={15} color="#64748b" style={{
             position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
           }} />
@@ -113,14 +139,12 @@ export default function MenuPage() {
             ref={searchRef}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Որոնել ուտեստ..."
+            placeholder={t('searchPlaceholder')}
             style={{
-              width: '100%',
-              padding: '11px 14px 11px 38px',
+              width: '100%', padding: '11px 14px 11px 38px',
               background: 'rgba(30,41,59,0.8)',
               border: '1px solid rgba(148,163,184,0.1)',
-              borderRadius: 12,
-              color: '#f1f5f9', fontSize: 14,
+              borderRadius: 12, color: '#f1f5f9', fontSize: 14,
               outline: 'none', fontFamily: 'inherit',
             }}
           />
@@ -139,10 +163,9 @@ export default function MenuPage() {
         {/* Categories */}
         <div style={{
           display: 'flex', gap: 8, overflowX: 'auto',
-          paddingBottom: 14,
-          scrollbarWidth: 'none',
+          paddingBottom: 14, scrollbarWidth: 'none',
         }}>
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <motion.button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
@@ -153,22 +176,17 @@ export default function MenuPage() {
                 background: selectedCategory === cat.id
                   ? 'linear-gradient(135deg, #f97316, #ea580c)'
                   : 'rgba(30,41,59,0.8)',
-                border: selectedCategory === cat.id
-                  ? 'none'
-                  : '1px solid rgba(148,163,184,0.1)',
+                border: selectedCategory === cat.id ? 'none' : '1px solid rgba(148,163,184,0.1)',
                 borderRadius: 100,
                 color: selectedCategory === cat.id ? 'white' : '#94a3b8',
                 cursor: 'pointer', whiteSpace: 'nowrap',
-                fontSize: 13, fontWeight: 600,
-                flexShrink: 0,
-                boxShadow: selectedCategory === cat.id
-                  ? '0 4px 16px rgba(249,115,22,0.4)'
-                  : 'none',
+                fontSize: 13, fontWeight: 600, flexShrink: 0,
+                boxShadow: selectedCategory === cat.id ? '0 4px 16px rgba(249,115,22,0.4)' : 'none',
                 transition: 'all 0.2s',
               }}
             >
               <span style={{ fontSize: 14 }}>{cat.emoji}</span>
-              {cat.label}
+              {cat.id === 'all' ? t('allCategory') : cat.label}
             </motion.button>
           ))}
         </div>
@@ -176,14 +194,13 @@ export default function MenuPage() {
 
       {/* Menu Grid */}
       <div style={{ padding: '20px 16px 120px' }}>
-        {/* Results count */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginBottom: 16,
         }}>
           <p style={{ fontSize: 13, color: '#475569' }}>
-            {items.length} ուտեստ
-            {searchQuery && ` «${searchQuery}»-ի արդյունքներ`}
+            {t('itemsCount', items.length)}
+            {searchQuery && t('searchResults', searchQuery)}
           </p>
           <button style={{
             display: 'flex', alignItems: 'center', gap: 6,
@@ -191,17 +208,14 @@ export default function MenuPage() {
             color: '#64748b', cursor: 'pointer', fontSize: 13,
           }}>
             <SlidersHorizontal size={13} />
-            Ֆilter
+            {t('filter')}
           </button>
         </div>
 
         {items.length === 0 ? (
-          <div style={{
-            textAlign: 'center', padding: '60px 0',
-            color: '#475569',
-          }}>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#475569' }}>
             <p style={{ fontSize: 48, marginBottom: 12 }}>🔍</p>
-            <p style={{ fontSize: 15 }}>Ոչ մի ուտեստ չի գտնվել</p>
+            <p style={{ fontSize: 15 }}>{t('noItems')}</p>
             <button
               onClick={() => { setSearchQuery(''); setSelectedCategory('all') }}
               style={{
@@ -211,7 +225,7 @@ export default function MenuPage() {
                 borderRadius: 8, cursor: 'pointer', fontSize: 13,
               }}
             >
-              Մաքրել ֆilter-ը
+              {t('clearFilter')}
             </button>
           </div>
         ) : (
@@ -227,7 +241,6 @@ export default function MenuPage() {
         )}
       </div>
 
-      {/* Overlays */}
       <ItemModal />
       <CartDrawer />
       <PaymentModal />
