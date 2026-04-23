@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart3, ShoppingBag, DollarSign, TrendingUp, Edit3,
@@ -8,6 +8,7 @@ import {
 import { formatPrice } from '../utils/mockData'
 import { useNavigate } from 'react-router-dom'
 import { connectSocket, socket } from '../utils/socket'
+import { getUser, clearAuth, authHeaders } from '../utils/auth'
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
 
@@ -64,7 +65,7 @@ function ItemForm({ item, onSave, onClose, categories }) {
       const url = item ? `${BACKEND}/api/menu/${item.id}` : `${BACKEND}/api/menu`
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ ...form, price: Number(form.price), calories: Number(form.calories) }),
       })
       const data = await res.json()
@@ -241,6 +242,8 @@ function QRModal({ table, onClose }) {
 
 export default function AdminPage() {
   const navigate = useNavigate()
+  const currentUser = getUser()
+  const restaurantId = currentUser?.restaurantId
   const [activeTab, setActiveTab] = useState('dashboard')
   const [menuItems, setMenuItems] = useState([])
   const [orders, setOrders] = useState([])
@@ -261,12 +264,14 @@ export default function AdminPage() {
 
   const fetchAll = async () => {
     setLoading(true)
+    const rid = restaurantId ? `?restaurantId=${restaurantId}` : ''
+    const h = authHeaders()
     try {
       const [menuRes, ordersRes, tablesRes, catsRes] = await Promise.all([
-        fetch(`${BACKEND}/api/menu`),
-        fetch(`${BACKEND}/api/orders`),
-        fetch(`${BACKEND}/api/tables`),
-        fetch(`${BACKEND}/api/categories`),
+        fetch(`${BACKEND}/api/menu${rid}`, { headers: h }),
+        fetch(`${BACKEND}/api/orders${rid}`, { headers: h }),
+        fetch(`${BACKEND}/api/tables${rid}`, { headers: h }),
+        fetch(`${BACKEND}/api/categories${rid}`, { headers: h }),
       ])
       const menuData = await menuRes.json()
       const ordersData = await ordersRes.json()
@@ -292,7 +297,7 @@ export default function AdminPage() {
 
   const addTable = async () => {
     if (!newTableName.trim()) return
-    const res = await fetch(`${BACKEND}/api/tables`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newTableName.trim() }) })
+    const res = await fetch(`${BACKEND}/api/tables`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ name: newTableName.trim() }) })
     const t = await res.json()
     setTables((prev) => [...prev, t])
     setNewTableName('')
@@ -300,7 +305,7 @@ export default function AdminPage() {
 
   const renameTable = async (id) => {
     if (!editTableName.trim()) return
-    const res = await fetch(`${BACKEND}/api/tables/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: editTableName.trim() }) })
+    const res = await fetch(`${BACKEND}/api/tables/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ name: editTableName.trim() }) })
     const t = await res.json()
     setTables((prev) => prev.map((tb) => tb.id === id ? t : tb))
     setEditTableId(null)
@@ -309,13 +314,13 @@ export default function AdminPage() {
 
   const deleteTable = async (id) => {
     if (!confirm('Հեռացնե՞լ սեղանը')) return
-    await fetch(`${BACKEND}/api/tables/${id}`, { method: 'DELETE' })
+    await fetch(`${BACKEND}/api/tables/${id}`, { method: 'DELETE', headers: authHeaders() })
     setTables((prev) => prev.filter((t) => t.id !== id))
   }
 
   const addCategory = async () => {
     if (!newCatLabel.trim()) return
-    const res = await fetch(`${BACKEND}/api/categories`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label: newCatLabel.trim(), emoji: newCatEmoji }) })
+    const res = await fetch(`${BACKEND}/api/categories`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ label: newCatLabel.trim(), emoji: newCatEmoji }) })
     const c = await res.json()
     setCategories((prev) => [...prev, c])
     setNewCatLabel('')
@@ -324,7 +329,7 @@ export default function AdminPage() {
 
   const renameCategory = async (id) => {
     if (!editCatLabel.trim()) return
-    const res = await fetch(`${BACKEND}/api/categories/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label: editCatLabel.trim(), emoji: editCatEmoji }) })
+    const res = await fetch(`${BACKEND}/api/categories/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ label: editCatLabel.trim(), emoji: editCatEmoji }) })
     const c = await res.json()
     setCategories((prev) => prev.map((cat) => cat.id === id ? c : cat))
     setEditCatId(null)
@@ -332,7 +337,7 @@ export default function AdminPage() {
 
   const deleteCategory = async (id) => {
     if (!confirm('Հեռացնե՞լ կատեգորիան')) return
-    await fetch(`${BACKEND}/api/categories/${id}`, { method: 'DELETE' })
+    await fetch(`${BACKEND}/api/categories/${id}`, { method: 'DELETE', headers: authHeaders() })
     setCategories((prev) => prev.filter((c) => c.id !== id))
   }
 
@@ -349,7 +354,7 @@ export default function AdminPage() {
 
   const deleteItem = async (id) => {
     if (!confirm('Հեռացնե՞լ ուտեստը')) return
-    await fetch(`${BACKEND}/api/menu/${id}`, { method: 'DELETE' })
+    await fetch(`${BACKEND}/api/menu/${id}`, { method: 'DELETE', headers: authHeaders() })
     setMenuItems((prev) => prev.filter((i) => i.id !== id))
   }
 
@@ -391,13 +396,17 @@ export default function AdminPage() {
           <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 20 }}>←</button>
           <h1 style={{ fontSize: 17, fontWeight: 800 }}>SmartMenu Admin</h1>
         </div>
-        <button
-          onClick={fetchAll}
-          style={{ background: 'rgba(148,163,184,0.08)', border: 'none', borderRadius: 8, padding: '7px 12px', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-        >
-          <RefreshCw size={14} />
-          Թարմացնել
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {currentUser && (
+            <span style={{ fontSize: 12, color: '#475569' }}>{currentUser.name || currentUser.restaurantId}</span>
+          )}
+          <button onClick={fetchAll} style={{ background: 'rgba(148,163,184,0.08)', border: 'none', borderRadius: 8, padding: '7px 12px', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            <RefreshCw size={14} />
+          </button>
+          <button onClick={() => { clearAuth(); navigate('/login') }} style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 8, padding: '7px 12px', color: '#ef4444', cursor: 'pointer', fontSize: 13 }}>
+            Выйти
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -667,7 +676,7 @@ export default function AdminPage() {
                       const newStatus = occupied ? 'free' : 'occupied'
                       await fetch(`${BACKEND}/api/tables/${t.id}/status`, {
                         method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...authHeaders() },
                         body: JSON.stringify({ status: newStatus }),
                       })
                       setTables((prev) => prev.map((tb) => tb.id === t.id ? { ...tb, status: newStatus } : tb))
@@ -782,3 +791,4 @@ export default function AdminPage() {
     </div>
   )
 }
+

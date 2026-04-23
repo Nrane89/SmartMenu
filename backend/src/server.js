@@ -8,6 +8,7 @@ import ordersRouter from './routes/orders.js'
 import menuRouter from './routes/menu.js'
 import tablesRouter from './routes/tables.js'
 import categoriesRouter from './routes/categories.js'
+import authRouter from './routes/auth.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -28,6 +29,7 @@ app.use((req, _res, next) => {
   next()
 })
 
+app.use('/api/auth', authRouter)
 app.use('/api/orders', ordersRouter)
 app.use('/api/menu', menuRouter)
 app.use('/api/tables', tablesRouter)
