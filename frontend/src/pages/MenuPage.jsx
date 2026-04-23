@@ -21,8 +21,13 @@ export default function MenuPage() {
 
   useEffect(() => {
     setTableId(tableId || 'T1')
-    setMenuItems(MENU_ITEMS)
     setCategories(CATEGORIES)
+
+    const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
+    fetch(`${BACKEND}/api/menu`)
+      .then((r) => r.json())
+      .then((data) => setMenuItems(data.items || []))
+      .catch(() => setMenuItems(MENU_ITEMS))
 
     connectSocket()
     socket.on('connect', () => setConnected(true))
