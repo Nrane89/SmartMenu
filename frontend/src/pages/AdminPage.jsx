@@ -5,7 +5,7 @@ import {
   Plus, X, Check, AlertCircle, RefreshCw, QrCode, Download,
   ToggleLeft, ToggleRight, Trash2, ChevronDown, Star, Tag,
 } from 'lucide-react'
-import { formatPrice, CATEGORIES } from '../utils/mockData'
+import { formatPrice } from '../utils/mockData'
 import { useNavigate } from 'react-router-dom'
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
@@ -47,7 +47,7 @@ function StatCard({ icon: Icon, label, value, color }) {
   )
 }
 
-function ItemForm({ item, onSave, onClose }) {
+function ItemForm({ item, onSave, onClose, categories }) {
   const [form, setForm] = useState(item || {
     name: '', nameEn: '', category: 'mains', price: '',
     description: '', calories: '', prepTime: '', color: '#f97316',
@@ -151,7 +151,7 @@ function ItemForm({ item, onSave, onClose }) {
               fontSize: 14, outline: 'none', fontFamily: 'inherit',
             }}
           >
-            {CATEGORIES.filter((c) => c.id !== 'all').map((c) => (
+            {categories.filter((c) => c.id !== 'all').map((c) => (
               <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
             ))}
           </select>
@@ -688,6 +688,7 @@ export default function AdminPage() {
           item={editItem}
           onSave={handleSaved}
           onClose={() => { setEditItem(null); setShowAddForm(false) }}
+          categories={categories}
         />
       )}
 
